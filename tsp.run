@@ -11,10 +11,11 @@ let CUTS := {};
 # =========================================================
 print "=== SECTION (a) Part 1: Heuristic ===";
 
-# 1. Nearest Neighbor
+# --- 1. Constructive Phase: Nearest Neighbor ---
 let tour[1] := 1;
 let visited[1] := 1;
 let current_node := 1;
+
 for {step in 2..n} {
     let min_dist := Infinity;
     let next_node := 0;
@@ -29,16 +30,28 @@ for {step in 2..n} {
     let current_node := next_node;
 }
 let tour[n+1] := 1;
-let best_cost := sum {k in 1..n} dist[tour[k], tour[k+1]];
 
-# 2. 2-Opt Improvement
+# Calculate and display NN cost
+let best_cost := sum {k in 1..n} dist[tour[k], tour[k+1]];
+printf "Constructive Heuristic (NN) Cost: %g\n", best_cost; 
+
+print "Edges selected by NN:";
+for {k in 1..n} {
+    printf "  (%d, %d) : %d\n", tour[k], tour[k+1], dist[tour[k], tour[k+1]];
+}
+print "---------------------------------------";
+
+# --- 2. Improvement Phase: 2-Opt Local Search ---
 let improved := 1;
 repeat while improved > 0 {
     let improved := 0;
     for {i in 1..n-2} {
         for {j in i+2..n} {
+             # Check if swapping edges improves cost
              if dist[tour[i], tour[j]] + dist[tour[i+1], tour[j+1]] < 
                 dist[tour[i], tour[i+1]] + dist[tour[j], tour[j+1]] then {
+                
+                # Perform 2-Opt swap
                 for {k in 0..floor((j - (i+1))/2)} {
                     let tmp := tour[i+1+k];
                     let tour[i+1+k] := tour[j-k];
@@ -51,9 +64,16 @@ repeat while improved > 0 {
         if improved = 1 then break;
     }
 }
-let best_cost := sum {k in 1..n} dist[tour[k], tour[k+1]];
-printf "Heuristic Upper Bound: %g\n", best_cost;
 
+# Calculate and display 2-Opt cost
+let best_cost := sum {k in 1..n} dist[tour[k], tour[k+1]];
+printf "Improved Heuristic (2-Opt) Cost: %g\n", best_cost;
+
+print "Edges selected by 2-Opt:";
+for {k in 1..n} {
+    printf "  (%d, %d) : %d\n", tour[k], tour[k+1], dist[tour[k], tour[k+1]];
+}
+print "---------------------------------------";
 
 # =========================================================
 # SECTION (a) Part 2: INITIAL RELAXATION (Lower Bound)
@@ -142,11 +162,12 @@ for {i in NODES, j in NODES: i < j} {
 # SECTION (c): VALID INEQUALITY (Manual)
 # =========================================================
 print "\n=== SECTION (c): Valid Inequality (Manual) ===";
-# Look for fractional cycles (e.g. 0.5s) in the output above.
-# UNCOMMENT ONE EXAMPLE BELOW and ADJUST node IDs:
+# OBSERVACIÓN: El grupo {2, 4, 12} está conectado al exterior solo por 1.0 unidad de flujo
+# (x[1,2]=0.5 y x[1,4]=0.5). Debe ser >= 2.
+print "Adding Connectivity Cut for cluster {2, 4, 12}...";
 
-# Example: If triangle 1-2-3 is fractional (0.5 each):
-# subject to Valid_Ineq: x[1,2] + x[2,3] + x[1,3] <= 2;
+subject to CutSet_C: 
+    sum {i in {2, 4, 12}, j in NODES diff {2, 4, 12}} (if i < j then x[i,j] else x[j,i]) >= 2;
 
 solve;
 display Total_Cost;
@@ -161,23 +182,23 @@ for {i in NODES, j in NODES: i < j} {
 # =========================================================
 print "\n=== SECTION (d): Gomory Cut (Manual) 1st time ===";
 
-subject to Gomory_Cut_1: x[1,2] + x[1,4] + x[2,4] <= 1;
+subject to Gomory_Cut_1: x[2,4] + x[2,12] + x[4,5] <= 1;
 
 solve;
 display Total_Cost;
 
-print "Active edges after (d) first time:";
+print "Active edges after first cut:";
 for {i in NODES, j in NODES: i < j} {
     if x[i,j] > 0.001 then printf "(%d, %d) = %.2f\n", i, j, x[i,j];
 }
 
 print "\n=== SECTION (d): Gomory Cut (Manual) 2nd time ===";
-subject to Gomory_Cut_2: x[6,7] + x[6,11] + x[7,11] <= 1;
+subject to Gomory_Cut_2: x[6,7]+ x[6,11] + x[7,11] <= 1;
 
 solve;
 display Total_Cost;
 
-print "Active edges after (d) second time:";
+print "Active edges after second cut:";
 for {i in NODES, j in NODES: i < j} {
     if x[i,j] > 0.001 then printf "(%d, %d) = %.2f\n", i, j, x[i,j];
 }
@@ -192,8 +213,23 @@ option relax_integrality 0; # Back to binary
 solve;
 display Total_Cost;
 
-print "Optimal Tour:";
+/*print "Optimal Tour:";
 for {i in NODES, j in NODES: i < j} {
     if x[i,j] > 0.9 then printf "(%d, %d) ", i, j;
+}*/
+
+print "Optimal Tour Edges & Weights:";
+print "-----------------------------";
+printf "%-12s | %s\n", "Edge (i,j)", "Cost";
+print "-----------------------------";
+
+for {i in NODES, j in NODES: i < j} {
+    # Usamos > 0.5 porque en B&B la variable es 0 o 1
+    if x[i,j] > 0.5 then {
+        printf "   (%2d, %2d)    |  %3d\n", i, j, dist[i,j];
+    }
 }
+print "-----------------------------";
+printf "TOTAL COST:      %d\n", Total_Cost;
+
 print "";
