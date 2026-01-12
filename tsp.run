@@ -162,8 +162,8 @@ for {i in NODES, j in NODES: i < j} {
 # SECTION (c): VALID INEQUALITY (Manual)
 # =========================================================
 print "\n=== SECTION (c): Valid Inequality (Manual) ===";
-# OBSERVACIÓN: El grupo {2, 4, 12} está conectado al exterior solo por 1.0 unidad de flujo
-# (x[1,2]=0.5 y x[1,4]=0.5). Debe ser >= 2.
+# look: group {2, 4, 12} is connected to the exterior by only 1 unit of flux
+# (x[1,2]=0.5 y x[1,4]=0.5). has to be >= 2.
 print "Adding Connectivity Cut for cluster {2, 4, 12}...";
 
 subject to CutSet_C: 
