@@ -3,7 +3,7 @@ model tsp.mod;
 data tsp.dat;
 option solver cplex;
 
-# Inicializamos el conjunto de cortes como vacío antes de nada
+# initialize set of cuts to nothing
 let CUTS := {};
 
 # =========================================================
